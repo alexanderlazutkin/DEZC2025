@@ -1,125 +1,185 @@
 - Course homework page: https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/cohorts/2025/02-workflow-orchestration/homework.md
 - Course materials:
-	- https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/02-workflow-orchestration
+	- https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/03-data-warehouse
 	- Check out the GitHub Repository here: https://go.kestra.io/de-zoomcamp
-- Due date: 4 февраль 2025 02:00 (local time)
+- Due date: 11.02.2025 02:00 (local time)
+
+**Important Note:**
+	For this homework we will be using the Yellow Taxi Trip Records for **January 2024 - June 2024 NOT the entire year of data** Parquet Files from the New York City Taxi Data found here:  
+	[https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)  	If you are using orchestration such as Kestra, Mage, Airflow or Prefect etc. do not load the data into Big Query using the orchestrator.  Stop with loading the files into a bucket.  
+	**Load Script:** You can manually download the parquet files and upload them to your GCS Bucket or you can use the linked script [here](https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/cohorts/2025/03-data-warehouse/load_yellow_taxi_data.py):  
+	You will simply need to generate a Service Account with GCS Admin Priveleges or be authenticated with the Google SDK and update the bucket name in the script to the name of your bucket  
+	Nothing is fool proof so make sure that all 6 files show in your GCS Bucket before begining.  
+	NOTE: You will need to use the PARQUET option files when creating an External Table
 
 # Prepare environment on WSL
-### Setup Kestra & PostgreSQL
-Run containers 
-```bash
-cd ~/02-workflow-orchestration
-docker compose up -d  #Kestra
-cd ~/02-workflow-orchestration\postgres
-docker compose up -d # PostgreSQL
-```
-select version();
-PostgreSQL 17.2 (Debian 17.2-1.pgdg120+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14) 12.2.0, 64-bit
 
-
-Importing flows programmatically using Kestra's API with following commands:
-```shell
-curl -X POST http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/01_getting_started_data_pipeline.yaml
-curl -X POST http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/02_postgres_taxi.yaml
-curl -X POST http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/02_postgres_taxi_scheduled.yaml
-curl -X POST http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/03_postgres_dbt.yaml
-curl -X POST http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/04_gcp_kv.yaml
-curl -X POST http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/05_gcp_setup.yaml
-curl -X POST http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/06_gcp_taxi.yaml
-curl -X POST http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/06_gcp_taxi_scheduled.yaml
-curl -X POST http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/07_gcp_dbt.yaml
-```
-### Working with local DB
-- Load Taxi Data to Postgres
-- Backfilling the the data for the year 2021 (2021-01-01 - 2021-07-31)
-	- Run the flow in Kestra [zoomcamp.02_postgres_taxi_scheduled](http://localhost:8080/ui/flows/edit/zoomcamp/02_postgres_taxi_scheduled) and setup backfilling period
-### Working with GCP
+### Setup GCP from previous homework
 - Configure service account and permissions (Storage and BQ Admins)
-- Configure and run Kestra flow 04_gcp_kv.yaml
 - Setup GCP bucket and dataset with Kestra: run flow 05_gcp_setup.yaml
-- Run data loading into BQ with backfilling as trigger option for the green & yellow taxi datasets: 06_gcp_taxi_scheduled.yaml
+- **BIG QUERY SETUP:**  
+	Create an external table using the Yellow Taxi Trip Records.  
+	Create a (regular/materialized) table in BQ using the Yellow Taxi Trip Records (do not partition or cluster this table).
+```bash
+sudo pip3 install google-cloud-storage
+cd ~/DEZC/Projects/week3
+python3 load_yellow_taxi_data.py
+```
+#### Create external table referring to gcs path:
+```sql
+CREATE OR REPLACE EXTERNAL TABLE `advance-vector-447116-m5.dezc2025demo97546.ext_yellow_tripdata_2024`
+OPTIONS (
+  format = 'PARQUET',
+  uris = ['gs://dezc2025demo97546/yellow_tripdata_2024*.parquet']
+);
+```
+#### Create a (regular/materialized) table in BQ using the Yellow Taxi Trip Records (do not partition or cluster this table)
+```sql
+CREATE OR REPLACE TABLE advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_regular AS
+SELECT * FROM advance-vector-447116-m5.dezc2025demo97546.ext_yellow_tripdata_2024;
+```
+
 
 
 ## Question 1.
-Within the execution for `Yellow` Taxi data for the year `2020` and month `12`: what is the uncompressed file size (i.e. the output file `yellow_tripdata_2020-12.csv` of the `extract` task)?
-- 128.3 MB
-- 134.5 MB
-- 364.7 MB
-- 692.6 MB
+Question 1: What is count of records for the 2024 Yellow Taxi Data?
+- 65,623
+- 840,402
+- 20,332,093
+- 85,431,289
 ### Answer:  
-- 128.3 MB
+- 20,332,093
 #### Solution: 
-- Setup for the flow task <purge_files> `disabled: true` 
-- Run and select execution in Kestra UI: Executions - Tasks (extract) - Outputs (outputFiles) - yellow_tripdata_2020-12.csv - Debug outputs - Getting info about file
+```sql
+SELECT COUNT(*)
+FROM advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_regular;
+```
 
 
 ## Question 2. 
-What is the rendered value of the variable `file` when the inputs `taxi` is set to `green`, `year` is set to `2020`, and `month` is set to `04` during execution?
-- {{inputs.taxi}}_tripdata_{{inputs.year}}-{{inputs.month}}.csv
-- green_tripdata_2020-04.csv
-- green_tripdata_04_2020.csv
-- green_tripdata_2020.csv
+Write a query to count the distinct number of PULocationIDs for the entire dataset on both the tables.  What is the **estimated amount** of data that will be read when this query is executed on the External Table and the Table?
+- 18.82 MB for the External Table and 47.60 MB for the Materialized Table
+- 0 MB for the External Table and 155.12 MB for the Materialized Table
+- 2.14 GB for the External Table and 0MB for the Materialized Table
+- 0 MB for the External Table and 0MB for the Materialized Table
 ### Answer:  
-- green_tripdata_2020-04.csv
+- 0 MB for the External Table and 155.12 MB for the Materialized Table
 
+#### Solution: 
+```sql
+SELECT COUNT(DISTINCT(PULocationID))
+FROM advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_regular;
+--This query will process 155.12 MB when run
+SELECT COUNT(DISTINCT(PULocationID))
+FROM advance-vector-447116-m5.dezc2025demo97546.ext_yellow_tripdata_2024;
+--This query will process 0 B when run
+```
 ## Question 3. 
-How many rows are there for the `Yellow` Taxi data for all CSV files in the year 2020?
-- 13,537,299
-- 24,648,499
-- 18,324,219
-- 29,430,127
+Write a query to retrieve the PULocationID from the table (not the external table) in BigQuery. Now write a query to retrieve the PULocationID and DOLocationID on the same table. Why are the estimated number of Bytes different?
+- BigQuery is a columnar database, and it only scans the specific columns requested in the query. Querying two columns (PULocationID, DOLocationID) requires reading more data than querying one column (PULocationID), leading to a higher estimated number of bytes processed.
+- BigQuery duplicates data across multiple storage partitions, so selecting two columns instead of one requires scanning the table twice, doubling the estimated bytes processed.
+- BigQuery automatically caches the first queried column, so adding a second column increases processing time but does not affect the estimated bytes scanned.
+- When selecting multiple columns, BigQuery performs an implicit join operation between them, increasing the estimated bytes processed
 ### Answer:  
-- 24,648,499
+- BigQuery is a columnar database, and it only scans the specific columns requested in the query. Querying two columns (PULocationID, DOLocationID) requires reading more data than querying one column (PULocationID), leading to a higher estimated number of bytes processed.
 
 #### Solution
 ```sql
-SELECT  COUNT(*)
-FROM `advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata`
-WHERE filename like 'yellow_tripdata_2020%'
-
+SELECT PULocationID
+FROM advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_regular;
+--This query will process 155.12 MB when run
+SELECT PULocationID, DOLocationID
+FROM advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_regular;
+--This query will process 310.24 MB when run
 ```
 ## Question 4.
-How many rows are there for the `Green` Taxi data for all CSV files in the year 2020?
-- 5,327,301
-- 936,199
-- 1,734,051
-- 1,342,034
+How many records have a fare_amount of 0?
+- 128,210
+- 546,578
+- 20,188,016
+- 8,333
 ### Answer:  
-- 1,734,051
+- 8,333
 #### Solution
 ```sql
-SELECT  COUNT(*)
-FROM `advance-vector-447116-m5.dezc2025demo97546.green_tripdata`
-WHERE filename like 'green_tripdata_2020%'
+SELECT COUNT(fare_amount)
+FROM advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_regular
+WHERE fare_amount = 0 
 ```
 
 ## Question 5. 
-How many rows are there for the `Yellow` Taxi data for the March 2021 CSV file?
-- 1,428,092
-- 706,911
-- 1,925,152
-- 2,561,031
+What is the best strategy to make an optimized table in Big Query if your query will always filter based on tpep_dropoff_datetime and order the results by VendorID (Create a new table with this strategy)
+- Partition by tpep_dropoff_datetime and Cluster on VendorID
+- Cluster on by tpep_dropoff_datetime and Cluster on VendorID
+- Cluster on tpep_dropoff_datetime Partition by VendorID
+- Partition by tpep_dropoff_datetime and Partition by VendorID
 ### Answer:  
-- 1,925,152
+- Partition by tpep_dropoff_datetime and Cluster on VendorID
 
 #### Solution
 ```sql
-SELECT  COUNT(*)
-FROM `advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata`
-WHERE filename = 'yellow_tripdata_2021-03.csv'
+CREATE OR REPLACE TABLE advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_partitioned_clustered
+PARTITION BY DATE(tpep_dropoff_datetime)
+CLUSTER BY VendorID AS 
+SELECT * FROM advance-vector-447116-m5.dezc2025demo97546.ext_yellow_tripdata_2024;
 ```
 
 ## Question 6. 
-How would you configure the timezone to New York in a Schedule trigger?
-- Add a `timezone` property set to `EST` in the `Schedule` trigger configuration
-- Add a `timezone` property set to `America/New_York` in the `Schedule` trigger configuration
-- Add a `timezone` property set to `UTC-5` in the `Schedule` trigger configuration
-- Add a `location` property set to `New_York` in the `Schedule` trigger configuration
+Write a query to retrieve the distinct VendorIDs between tpep_dropoff_datetime 2024-03-01 and 2024-03-15 (inclusive). Use the materialized table you created earlier in your from clause and note the estimated bytes. Now change the table in the from clause to the partitioned table you created for question 5 and note the estimated bytes processed. What are these values?  
+Choose the answer which most closely matches.  
+- 12.47 MB for non-partitioned table and 326.42 MB for the partitioned table
+- 310.24 MB for non-partitioned table and 26.84 MB for the partitioned table
+- 5.87 MB for non-partitioned table and 0 MB for the partitioned table
+- 310.31 MB for non-partitioned table and 285.64 MB for the partitioned table
 ### Answer:  
-- Add a `timezone` property set to `UTC-5` in the `Schedule` trigger configuration
+- 310.24 MB for non-partitioned table and 26.84 MB for the partitioned table
 
 #### Solution
-- Add timezone property for schedule https://kestra.io/plugins/core/triggers/io.kestra.plugin.core.trigger.schedule#timezone into yaml
+```sql
+SELECT DISTINCT(VendorID) 
+FROM advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_regular
+WHERE DATE(tpep_dropoff_datetime) BETWEEN '2024-03-01' AND '2024-03-15';
+--This query will process 310.24 MB when run
+SELECT DISTINCT(VendorID) 
+FROM advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_partitioned_clustered
+WHERE DATE(tpep_dropoff_datetime) BETWEEN '2024-03-01' AND '2024-03-15';
+--This query will process 26.84 MB when run
+```
+
+## Question 7. 
+Where is the data stored in the External Table you created?
+- Big Query
+- Container Registry
+- GCP Bucket
+- Big Table
+### Answer:  
+- GCP Bucket
+
+#### Solution
+- https://cloud.google.com/bigquery/docs/external-data-cloud-storage#sql
+
+## Question 8. 
+It is best practice in Big Query to always cluster your data:
+- True
+- False
+### Answer:  
+- False
+
+#### Solution
+- https://cloud.google.com/bigquery/docs/clustered-tables#when_to_use_clustering
+- https://cloud.google.com/bigquery/docs/querying-clustered-tables
+
+## Question 9. 
+No Points: Write a `SELECT count(*)` query FROM the materialized table you created. How many bytes does it estimate will be read? Why?
+### Answer:  
+- This query will process 0 B when run. BigQuery does not scan actual data and getting answer from metadata tables.
+
+#### Solution
+```sql
+SELECT count(*)
+FROM advance-vector-447116-m5.dezc2025demo97546.yellow_tripdata_2024_regular
+--This query will process 0 B when run.
+```
 
 ## Submitting the solutions
-- Form for submitting: [https://courses.datatalks.club/de-zoomcamp-2025/homework/hw2](https://courses.datatalks.club/de-zoomcamp-2025/homework/hw2)
+Form for submitting: [https://courses.datatalks.club/de-zoomcamp-2025/homework/hw3](https://courses.datatalks.club/de-zoomcamp-2025/homework/hw3)
