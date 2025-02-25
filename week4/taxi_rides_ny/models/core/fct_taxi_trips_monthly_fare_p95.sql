@@ -1,6 +1,6 @@
 {{ config(materialized='table') }}  
 
-WITH filtered_trips AS (
+WITH prepared_trips AS (
     SELECT 
         service_type,
         EXTRACT(YEAR FROM pickup_datetime) AS year,
@@ -13,7 +13,7 @@ WITH filtered_trips AS (
         AND payment_type_description IN ('Cash', 'Credit card')
 ),
 
-percentile_fares AS (
+percentile_data AS (
     SELECT 
         service_type,
         year,
@@ -21,9 +21,9 @@ percentile_fares AS (
         PERCENTILE_CONT(fare_amount, 0.97) OVER (PARTITION BY service_type, year, month) AS fare_p97,
         PERCENTILE_CONT(fare_amount, 0.95) OVER (PARTITION BY service_type, year, month) AS fare_p95,
         PERCENTILE_CONT(fare_amount, 0.90) OVER (PARTITION BY service_type, year, month) AS fare_p90
-    FROM filtered_trips
+    FROM prepared_trips
 )
 
-SELECT DISTINCT service_type, year, month, fare_p97, fare_p95, fare_p90
-FROM percentile_fares
-
+SELECT service_type, year, month, fare_p97, fare_p95, fare_p90
+FROM percentile_data
+GROUP BY service_type, year, month, fare_p97, fare_p95, fare_p90

@@ -97,7 +97,7 @@ Select the option that does **NOT** apply for materializing `fct_taxi_monthly
 - `dbt run --select +models/core/`
 - `dbt run --select models/staging/+`
 #### Answer:  
-- `dbt run --select models/staging/+`
+- `dbt run --select models/staging/+` 
 
 
 ### Question 4: dbt Macros and Jinja
@@ -161,6 +161,14 @@ Considering the YoY Growth in 2020, which were the yearly quarters with the best
 #### Answer:  
 - green: {best: 2020/Q1, worst: 2020/Q2}, yellow: {best: 2020/Q1, worst: 2020/Q2}
 
+```sql
+SELECT yoy_growth, year, quarter, service_type, total_revenue, prev_year_revenue
+FROM `advance-vector-447116-m5.trips_data_all.fct_taxi_trips_quarterly_revenue` 
+WHERE year = 2020
+ORDER BY yoy_growth DESC
+LIMIT 10
+```
+
 ### Question 6: P97/P95/P90 Taxi Monthly Fare
 7. Create a new model `fct_taxi_trips_monthly_fare_p95.sql`
 8. Filter out invalid entries (`fare_amount > 0`, `trip_distance > 0`, and `payment_type_description in ('Cash', 'Credit Card')`)
@@ -177,6 +185,35 @@ Now, what are the values of `p97`, `p95`, `p90` for Green Taxi and Yellow Ta
 - green: {p97: 55.0, p95: 45.0, p90: 26.5}, yellow: {p97: 31.5, p95: 25.5, p90: 19.0}
 
 ```sql
+{{ config(materialized='table') }}  
+
+WITH prepared_trips AS (
+    SELECT 
+        service_type,
+        EXTRACT(YEAR FROM pickup_datetime) AS year,
+        EXTRACT(MONTH FROM pickup_datetime) AS month,
+        fare_amount
+    FROM {{ ref('fact_trips') }}
+    WHERE 
+        fare_amount > 0 
+        AND trip_distance > 0 
+        AND payment_type_description IN ('Cash', 'Credit card')
+),
+
+percentile_data AS (
+    SELECT 
+        service_type,
+        year,
+        month,
+        PERCENTILE_CONT(fare_amount, 0.97) OVER (PARTITION BY service_type, year, month) AS fare_p97,
+        PERCENTILE_CONT(fare_amount, 0.95) OVER (PARTITION BY service_type, year, month) AS fare_p95,
+        PERCENTILE_CONT(fare_amount, 0.90) OVER (PARTITION BY service_type, year, month) AS fare_p90
+    FROM prepared_trips
+)
+
+SELECT service_type, year, month, fare_p97, fare_p95, fare_p90
+FROM percentile_data
+GROUP BY service_type, year, month, fare_p97, fare_p95, fare_p90
 
 ```
 
@@ -198,8 +235,26 @@ For the Trips that **respectively** started from `Newark Airport`, `SoHo`, a
 - LaGuardia Airport, Rosedale, Bath Beach
 - LaGuardia Airport, Yorkville East, Greenpoint
 #### Answer:  
-- 
+- LaGuardia Airport, Chinatown, Garment District
 
+```sql
+WITH ranked_trips AS (
+    SELECT 
+        pz.zone AS pickup_zone,
+        dz.zone AS dropoff_zone,
+        t.travel_time_p90,
+        ROW_NUMBER() OVER (PARTITION BY pz.zone ORDER BY t.travel_time_p90 DESC) AS trip_rank
+    FROM advance-vector-447116-m5.trips_data_all.fct_fhv_monthly_zone_traveltime_p90 t
+    JOIN advance-vector-447116-m5.trips_data_all.dim_zones pz ON t.pickup_locationid = pz.locationid
+    JOIN advance-vector-447116-m5.trips_data_all.dim_zones dz ON t.dropoff_locationid = dz.locationid
+    WHERE 
+        t.year = 2019  AND t.month = 11
+        AND pz.zone IN ('Newark Airport', 'SoHo', 'Yorkville East')
+)
 
+SELECT  pickup_zone, dropoff_zone, travel_time_p90
+FROM ranked_trips
+WHERE trip_rank = 2;
+```
 ## Submitting the solutions
 - Form for submitting: [https://courses.datatalks.club/de-zoomcamp-2025/homework/hw4](https://courses.datatalks.club/de-zoomcamp-2025/homework/hw4)
