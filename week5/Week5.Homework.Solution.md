@@ -28,7 +28,7 @@ What's the output?
 - Run PySpark https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/05-batch/setup/pyspark.md
 - Install Jupyter Notebooks https://code.adonline.id.au/jupyter-notebook-in-windows-subsystem-for-linux-wsl/
 - Open and run homework notebook till 'spark.version'  https://github.com/DataTalksClub/data-engineering-zoomcamp/blob/main/05-batch/code/homework.ipynb
-- See detail in homework.ipynb file
+- See detail in [homework.ipynb](https://github.com/alexanderlazutkin/DEZC2025/blob/main/week5/homework.ipynb) file
 
 ### Question 2: Yellow October 2024
 Read the October 2024 Yellow into a Spark Dataframe.
@@ -42,7 +42,7 @@ What is the average size of the Parquet (ending with .parquet extension) Files t
 #### Answer:  
 - 25MB
 #### Solution
-- See detail in homework.ipynb file
+- See detail in [homework.ipynb](https://github.com/alexanderlazutkin/DEZC2025/blob/main/week5/homework.ipynb) file
 
 ### Question 3: Count records
 How many taxi trips were there on the 15th of October?
@@ -66,7 +66,7 @@ What is the length of the longest trip in the dataset in hours?
 #### Answer:  
 - 162
 #### Solution
-- See detail in homework.ipynb file
+- See detail in [homework.ipynb](https://github.com/alexanderlazutkin/DEZC2025/blob/main/week5/homework.ipynb) file
 
 ### Question 5: User Interface
 Spark’s User Interface which shows the application's dashboard runs on which local port?
@@ -95,6 +95,6 @@ Using the zone lookup data and the Yellow October 2024 data, what is the name of
 #### Answer:  
 - Governor's Island/Ellis Island/Liberty Island
 #### Solution
-- See detail in homework.ipynb file
+- See detail in [homework.ipynb](https://github.com/alexanderlazutkin/DEZC2025/blob/main/week5/homework.ipynb) file
 ## Submitting the solutions
 - Form for submitting: [https://courses.datatalks.club/de-zoomcamp-2025/homework/hw5](https://courses.datatalks.club/de-zoomcamp-2025/homework/hw5)
