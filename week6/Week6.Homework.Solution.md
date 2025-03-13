@@ -202,7 +202,7 @@ PRIMARY KEY (PULocationID, DOLocationID, session_start)
 );
 ```
 
-Run producer for Q4 sediung trip data
+Run producer for Q4 sending trip data
 ```bash
 cd ~/DEZC/Projects/week6/pyflink
 docker compose exec jobmanager ./bin/flink run -py /opt/src/job/aggregation_job.py --pyFiles /opt/src -d
