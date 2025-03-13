@@ -178,7 +178,6 @@ How much time did it take to send the entire dataset and flush?
 
 ## Question 5: Build a Sessionization Window (2 points)
 Now we have the data in the Kafka stream. It's time to process it.
-- Copy `aggregation_job.py` and rename it to `session_job.py`
 - Have it read from `green-trips` fixing the schema
 - Use a [session window](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/datastream/operators/windows/) with a gap of 5 minutes
 - Use `lpep_dropoff_datetime` time as your watermark with a 5 second tolerance
@@ -188,7 +187,7 @@ Now we have the data in the Kafka stream. It's time to process it.
 
 
 #### Solution
-Prepare sink table in database
+Prepare [aggregation_job.py](https://github.com/alexanderlazutkin/DEZC2025/blob/main/week6/aggregation_job.py) and sink table in database
 ```sql
 drop table if exists aggregated_trips;
 CREATE TABLE aggregated_trips (
