@@ -136,7 +136,7 @@ Provided that you can connect to the server, what's the output of the last comma
 
 
 #### Solution
-- Run jupyter notebook and run the code for Q3. See detail in Homework with Flink.ipynb file
+- Run jupyter notebook and run the code for Q3. See detail in [Homework with Flink.ipynb](https://github.com/alexanderlazutkin/DEZC2025/blob/main/week6/Homework%20with%20Flink.ipynb) file
 
 ## Question 4: Sending the Trip Data
 Now we need to send the data to the `green-trips` topic
@@ -173,7 +173,7 @@ How much time did it take to send the entire dataset and flush?
 
 
 #### Solution
-- Run jupyter notebook and run the code for Q4. See detail in Homework with Flink.ipynb file
+- Run jupyter notebook and run the code for Q4. See detail in [Homework with Flink.ipynb](https://github.com/alexanderlazutkin/DEZC2025/blob/main/week6/Homework%20with%20Flink.ipynb) file
 
 
 ## Question 5: Build a Sessionization Window (2 points)
